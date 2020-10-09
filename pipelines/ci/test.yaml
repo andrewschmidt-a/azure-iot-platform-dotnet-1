@@ -830,7 +830,7 @@ stages:
                 kubectl get pods -n $(kubernetesNamespace)
                 kubectl wait pods --for=condition=Ready --selector app.kubernetes.io/name=webui -n $(kubernetesNamespace)
                 kubectl wait pods --for=condition=Ready --timeout=500s --selector app.kubernetes.io/name=reverse-proxy -n $(kubernetesNamespace)
-                
+
           - task: DotNetCoreCLI@2
             displayName: Run functional tests
             continueOnError: true
