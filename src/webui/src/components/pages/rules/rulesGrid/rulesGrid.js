@@ -5,7 +5,11 @@ import { Trans } from "react-i18next";
 
 import { permissions, toDiagnosticsModel } from "services/models";
 import { Btn, ComponentArray, PcsGrid, Protected } from "components/shared";
-import { rulesColumnDefs, defaultRulesGridProps } from "./rulesGridConfig";
+import {
+    rulesColumnDefs,
+    defaultRulesGridProps,
+    defaultColDef,
+} from "./rulesGridConfig";
 import { checkboxColumn } from "components/shared/pcsGrid/pcsGridConfig";
 import {
     isFunc,
@@ -23,7 +27,8 @@ import {
     DeleteRuleContainer,
 } from "../flyouts";
 
-import "./rulesGrid.scss";
+const classnames = require("classnames/bind");
+const css = classnames.bind(require("./rulesGrid.module.scss"));
 
 const closedFlyoutState = {
     openFlyoutName: undefined,
@@ -56,7 +61,7 @@ export class RulesGrid extends Component {
             disable: (
                 <Protected key="disable" permission={permissions.updateRules}>
                     <Btn
-                        className="rule-status-btn"
+                        className={css("rule-status-btn")}
                         svg={svgs.disableToggle}
                         onClick={this.openStatusFlyout}
                     >
@@ -67,7 +72,7 @@ export class RulesGrid extends Component {
             enable: (
                 <Protected key="enable" permission={permissions.updateRules}>
                     <Btn
-                        className="rule-status-btn enabled"
+                        className={css("rule-status-btn", "enabled")}
                         svg={svgs.enableToggle}
                         onClick={this.openStatusFlyout}
                     >
@@ -81,7 +86,7 @@ export class RulesGrid extends Component {
                     permission={permissions.updateRules}
                 >
                     <Btn
-                        className="rule-status-btn"
+                        className={css("rule-status-btn")}
                         svg={svgs.changeStatus}
                         onClick={this.openStatusFlyout}
                     >
@@ -108,7 +113,7 @@ export class RulesGrid extends Component {
         };
     }
 
-    componentWillReceiveProps({ rowData }) {
+    UNSAFE_componentWillReceiveProps({ rowData }) {
         const { selectedRules = [], softSelectedRuleId } = this.state;
         if (rowData && (selectedRules.length || softSelectedRuleId)) {
             let updatedSoftSelectedRule;
@@ -137,7 +142,7 @@ export class RulesGrid extends Component {
 
     getDefaultFlyout(rowData) {
         const { location, userPermissions } = this.props;
-        const flyoutName = getFlyoutNameParam(location.search);
+        const flyoutName = getFlyoutNameParam(location);
         var isUserHasPermission = true;
         if (
             flyoutName === "edit" &&
@@ -145,9 +150,10 @@ export class RulesGrid extends Component {
         ) {
             isUserHasPermission = false;
         }
-        const ruleId = getParamByName(location.search, "ruleId"),
+        const ruleId = getParamByName(location, "ruleId"),
             rule = rowData.find((rule) => rule.id === ruleId);
         if (
+            location &&
             location.search &&
             !this.state.softSelectedRuleId &&
             rule &&
@@ -184,12 +190,14 @@ export class RulesGrid extends Component {
         switch (this.state.openFlyoutName) {
             case "view":
                 flyoutLink = getFlyoutLink(
+                    this.props.currentTenantId,
                     this.props.activeDeviceGroupId,
                     "ruleId",
                     this.state.softSelectedRuleId,
                     "view"
                 );
                 const editFlyoutLink = getFlyoutLink(
+                    this.props.currentTenantId,
                     this.props.activeDeviceGroupId,
                     "ruleId",
                     this.state.softSelectedRuleId,
@@ -211,6 +219,7 @@ export class RulesGrid extends Component {
                 );
             case "edit":
                 flyoutLink = getFlyoutLink(
+                    this.props.currentTenantId,
                     this.props.activeDeviceGroupId,
                     "ruleId",
                     this.state.softSelectedRuleId ||
@@ -307,7 +316,9 @@ export class RulesGrid extends Component {
     getSoftSelectId = ({ id } = "") => id;
 
     closeFlyout = () => {
-        this.props.location.search = undefined;
+        if (this.props.location && this.props.location.search) {
+            this.props.location.search = undefined;
+        }
         this.setState(closedFlyoutState);
     };
 
@@ -317,14 +328,13 @@ export class RulesGrid extends Component {
             ...defaultRulesGridProps,
             onFirstDataRendered: this.onFirstDataRendered,
             columnDefs: translateColumnDefs(this.props.t, this.columnDefs),
+            defaultColDef: defaultColDef,
             sizeColumnsToFit: true,
             getSoftSelectId: this.getSoftSelectId,
             softSelectId: this.state.softSelectedRuleId || {},
-            deltaRowDataMode: true,
-            ...this.props, // Allow default property overrides
+            immutableData: true,
             getRowNodeId: ({ id }) => id,
-            enableSorting: true,
-            unSortIcon: true,
+            ...this.props, // Allow default property overrides
             context: {
                 t: this.props.t,
                 deviceGroups: this.props.deviceGroups,
@@ -333,6 +343,8 @@ export class RulesGrid extends Component {
             onRowClicked: ({ node }) => node.setSelected(!node.isSelected()),
             onHardSelectChange: this.onHardSelectChange,
             onSoftSelectChange: this.onSoftSelectChange,
+            searchPlaceholder: this.props.t("rules.searchPlaceholder"),
+            searchAreaLabel: this.props.t("rules.ariaLabel"),
         };
 
         return (

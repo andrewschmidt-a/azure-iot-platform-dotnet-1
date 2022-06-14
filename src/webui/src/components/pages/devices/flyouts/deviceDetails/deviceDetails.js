@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import React, { Component } from "react";
-import { Observable, Subject } from "rxjs";
+import { merge, of, Subject } from "rxjs";
 import { Trans } from "react-i18next";
 import moment from "moment";
 import {
@@ -33,6 +33,7 @@ import {
     PropertyCell as Cell,
     SectionDesc,
     TimeSeriesInsightsLinkContainer,
+    Hyperlink,
 } from "components/shared";
 import { TimeIntervalDropdownContainer as TimeIntervalDropdown } from "components/shell/timeIntervalDropdown";
 import Flyout from "components/shared/flyout";
@@ -43,7 +44,10 @@ import {
 import { transformTelemetryResponse } from "components/pages/dashboard/panels";
 import { getEdgeAgentStatusCode } from "utilities";
 
-import "./deviceDetails.scss";
+import { delay, map, mergeMap, switchMap, tap } from "rxjs/operators";
+
+const classnames = require("classnames/bind");
+const css = classnames.bind(require("./deviceDetails.module.scss"));
 
 const Section = Flyout.Section,
     serializeNestedDeviceProperties = (parentName, value) => {
@@ -130,47 +134,54 @@ export class DeviceDetails extends Component {
             refreshInterval = ((hours * 60 + minutes) * 60 + seconds) * 1000,
             // Telemetry stream - START
             onPendingStart = () => this.setState({ telemetryIsPending: true }),
-            telemetry$ = this.resetTelemetry$
-                .do((_) => this.setState({ telemetry: {} }))
-                .switchMap(
+            telemetry$ = this.resetTelemetry$.pipe(
+                tap((_) => this.setState({ telemetry: {} })),
+                switchMap(
                     (deviceId) =>
-                        TelemetryService.getTelemetryByDeviceId(
-                            [deviceId],
-                            TimeIntervalDropdown.getTimeIntervalDropdownValue()
-                        )
-                            .flatMap((items) => {
-                                this.setState({
-                                    telemetryQueryExceededLimit:
-                                        items.length >= 1000,
-                                });
-                                return Observable.of(items);
-                            })
-                            .merge(
-                                this.telemetryRefresh$ // Previous request complete
-                                    .delay(
-                                        refreshInterval ||
-                                            Config.dashboardRefreshInterval
-                                    ) // Wait to refresh
-                                    .do(onPendingStart)
-                                    .flatMap((_) =>
-                                        TelemetryService.getTelemetryByDeviceIdP1M(
-                                            [deviceId]
-                                        )
-                                    )
+                        merge(
+                            TelemetryService.getTelemetryByDeviceId(
+                                [deviceId],
+                                TimeIntervalDropdown.getTimeIntervalDropdownValue()
+                            ).pipe(
+                                mergeMap((items) => {
+                                    this.setState({
+                                        telemetryQueryExceededLimit:
+                                            items.length >= 1000,
+                                    });
+                                    return of(items);
+                                })
+                            ),
+                            this.telemetryRefresh$.pipe(
+                                // Previous request complete
+                                delay(
+                                    refreshInterval ||
+                                        Config.dashboardRefreshInterval
+                                ), // Wait to refresh
+                                tap(onPendingStart),
+                                mergeMap((_) =>
+                                    TelemetryService.getTelemetryByDeviceIdP1M([
+                                        deviceId,
+                                    ])
+                                )
                             )
-                            .flatMap((messages) =>
+                        ).pipe(
+                            mergeMap((messages) =>
                                 transformTelemetryResponse(
                                     () => this.state.telemetry
-                                )(messages).map((telemetry) => ({
-                                    telemetry,
-                                    lastMessage: messages[0],
-                                }))
-                            )
-                            .map((newState) => ({
+                                )(messages).pipe(
+                                    map((telemetry) => ({
+                                        telemetry,
+                                        lastMessage: messages[0],
+                                    }))
+                                )
+                            ),
+                            map((newState) => ({
                                 ...newState,
                                 telemetryIsPending: false,
-                            })) // Stream emits new state
-                );
+                            }))
+                        ) // Stream emits new state
+                )
+            );
         // Telemetry stream - END
 
         this.telemetrySubscription = telemetry$.subscribe(
@@ -185,7 +196,7 @@ export class DeviceDetails extends Component {
         this.resetTelemetry$.next(deviceId);
     }
 
-    componentWillReceiveProps(nextProps) {
+    UNSAFE_componentWillReceiveProps(nextProps) {
         const {
             deviceModuleStatus,
             isDeviceModuleStatusPending,
@@ -224,6 +235,7 @@ export class DeviceDetails extends Component {
             this.resetTelemetry$.next(deviceId);
             this.fetchAlerts(deviceId);
             this.fetchDeviceUploads(deviceId);
+            this.fetchDeviceDeployments(deviceId);
         } else if (
             !moduleStatus &&
             !isDeviceModuleStatusPending &&
@@ -395,26 +407,28 @@ export class DeviceDetails extends Component {
                 }}
                 flyoutLink={flyoutLink}
             >
-                <div className="device-details-container">
+                <div className={css("device-details-container")}>
                     {!device && (
-                        <div className="device-details-container">
+                        <div className={css("device-details-container")}>
                             <ErrorMsg>
                                 {t("devices.flyouts.details.noDevice")}
                             </ErrorMsg>
                         </div>
                     )}
                     {!!device && (
-                        <div className="device-details-container">
-                            <Grid className="device-details-header">
+                        <div className={css("device-details-container")}>
+                            <Grid className={css("device-details-header")}>
                                 <Row>
                                     <Cell className="col-3">
                                         <DeviceIcon type={device.type} />
                                     </Cell>
                                     <Cell className="col-7">
-                                        <div className="device-name">
+                                        <div className={css("device-name")}>
                                             {device.id}
                                         </div>
-                                        <div className="device-simulated">
+                                        <div
+                                            className={css("device-simulated")}
+                                        >
                                             {device.isSimulated
                                                 ? t(
                                                       "devices.flyouts.details.simulated"
@@ -423,7 +437,9 @@ export class DeviceDetails extends Component {
                                                       "devices.flyouts.details.notSimulated"
                                                   )}
                                         </div>
-                                        <div className="device-connected">
+                                        <div
+                                            className={css("device-connected")}
+                                        >
                                             {device.connected
                                                 ? t(
                                                       "devices.flyouts.details.connected"
@@ -453,7 +469,9 @@ export class DeviceDetails extends Component {
                                         onChange={this.updateTimeInterval}
                                         value={this.props.timeInterval}
                                         t={t}
-                                        className="device-details-time-interval-dropdown"
+                                        className={css(
+                                            "device-details-time-interval-dropdown"
+                                        )}
                                     />
                                     {timeSeriesExplorerUrl && (
                                         <TimeSeriesInsightsLinkContainer
@@ -461,7 +479,7 @@ export class DeviceDetails extends Component {
                                         />
                                     )}
                                     <TelemetryChart
-                                        className="telemetry-chart"
+                                        className={css("telemetry-chart")}
                                         t={t}
                                         limitExceeded={
                                             this.state
@@ -663,10 +681,11 @@ export class DeviceDetails extends Component {
                                                                         .desiredProperties[
                                                                         propertyName
                                                                     ],
-                                                                serializedProperties = serializeNestedDeviceProperties(
-                                                                    propertyName,
-                                                                    propertyValue
-                                                                ),
+                                                                serializedProperties =
+                                                                    serializeNestedDeviceProperties(
+                                                                        propertyName,
+                                                                        propertyValue
+                                                                    ),
                                                                 rows = [];
                                                             Object.entries(
                                                                 serializedProperties
@@ -683,8 +702,10 @@ export class DeviceDetails extends Component {
                                                                                 : t(
                                                                                       "devices.flyouts.details.properties.syncing",
                                                                                       {
-                                                                                          reportedPropertyValue: value.toString(),
-                                                                                          desiredPropertyValue: desiredPropertyValue.toString(),
+                                                                                          reportedPropertyValue:
+                                                                                              value.toString(),
+                                                                                          desiredPropertyValue:
+                                                                                              desiredPropertyValue.toString(),
                                                                                       }
                                                                                   ),
                                                                         truncatedDisplayName =
@@ -733,7 +754,11 @@ export class DeviceDetails extends Component {
                                                     )}
                                                 </GridBody>
                                             </Grid>
-                                            <Grid className="device-properties-actions">
+                                            <Grid
+                                                className={css(
+                                                    "device-properties-actions"
+                                                )}
+                                            >
                                                 <Row>
                                                     <Cell className="col-8">
                                                         {t(
@@ -773,7 +798,11 @@ export class DeviceDetails extends Component {
                                         )}
                                     </SectionDesc>
 
-                                    <Grid className="device-details-diagnostics">
+                                    <Grid
+                                        className={css(
+                                            "device-details-diagnostics"
+                                        )}
+                                    >
                                         <GridHeader>
                                             <Row>
                                                 <Cell className="col-3">
@@ -831,7 +860,9 @@ export class DeviceDetails extends Component {
                                                         </Cell>
                                                         <Cell className="col-15">
                                                             <Btn
-                                                                className="raw-message-button"
+                                                                className={css(
+                                                                    "raw-message-button"
+                                                                )}
                                                                 onClick={
                                                                     this
                                                                         .toggleRawDiagnosticsMessage
@@ -871,7 +902,11 @@ export class DeviceDetails extends Component {
                                             "devices.flyouts.details.modules.description"
                                         )}
                                     </SectionDesc>
-                                    <div className="device-details-deployment-contentbox">
+                                    <div
+                                        className={css(
+                                            "device-details-deployment-contentbox"
+                                        )}
+                                    >
                                         {!moduleQuerySuccessful &&
                                             t(
                                                 "devices.flyouts.details.modules.noneExist"
@@ -907,13 +942,21 @@ export class DeviceDetails extends Component {
                                             "devices.flyouts.details.deviceUploads.description"
                                         )}
                                     </SectionDesc>
-                                    <div className="device-details-deviceuploads-contentbox">
+                                    <div
+                                        className={css(
+                                            "device-details-deviceuploads-contentbox"
+                                        )}
+                                    >
                                         {deviceUploads.length === 0 &&
                                             t(
                                                 "devices.flyouts.details.deviceUploads.noneExist"
                                             )}
                                         {deviceUploads.length > 0 && (
-                                            <Grid className="device-details-deviceuploads">
+                                            <Grid
+                                                className={css(
+                                                    "device-details-deviceuploads"
+                                                )}
+                                            >
                                                 <GridHeader>
                                                     <Row>
                                                         <Cell className="col-7">
@@ -939,7 +982,11 @@ export class DeviceDetails extends Component {
                                                                         }
                                                                         tooltip={
                                                                             <div>
-                                                                                <Grid className="device-details-deviceuploads-popup">
+                                                                                <Grid
+                                                                                    className={css(
+                                                                                        "device-details-deviceuploads-popup"
+                                                                                    )}
+                                                                                >
                                                                                     <GridHeader>
                                                                                         <Row>
                                                                                             <Cell className="col-3">
@@ -1000,7 +1047,9 @@ export class DeviceDetails extends Component {
                                                                         svg={
                                                                             svgs.upload
                                                                         }
-                                                                        className="download-deviceupload"
+                                                                        className={css(
+                                                                            "download-deviceupload"
+                                                                        )}
                                                                         onClick={() =>
                                                                             this.downloadFile(
                                                                                 upload.BlobName,
@@ -1030,15 +1079,28 @@ export class DeviceDetails extends Component {
                                             "devices.flyouts.details.deviceDeployments.description"
                                         )}
                                     </SectionDesc>
-                                    <div className="device-details-deviceDeployments-contentbox">
+                                    <div
+                                        className={css(
+                                            "device-details-deviceDeployments-contentbox"
+                                        )}
+                                    >
                                         {deviceDeployments.length === 0 &&
                                             t(
                                                 "devices.flyouts.details.deviceDeployments.noneExist"
                                             )}
-                                        {deviceDeployments.length > 0 && (
-                                            <Grid className="device-details-deviceDeployments">
+                                        {deviceDeployments.length >= 0 && (
+                                            <Grid
+                                                className={css(
+                                                    "device-details-deviceDeployments"
+                                                )}
+                                            >
                                                 <GridHeader>
                                                     <Row>
+                                                        <Cell className="col-4">
+                                                            {t(
+                                                                "devices.flyouts.details.deviceDeployments.deploymentName"
+                                                            )}
+                                                        </Cell>
                                                         <Cell className="col-4">
                                                             {t(
                                                                 "devices.flyouts.details.deviceDeployments.firmwareVersion"
@@ -1046,12 +1108,7 @@ export class DeviceDetails extends Component {
                                                         </Cell>
                                                         <Cell className="col-4">
                                                             {t(
-                                                                "devices.flyouts.details.deviceDeployments.startDate"
-                                                            )}
-                                                        </Cell>
-                                                        <Cell className="col-4">
-                                                            {t(
-                                                                "devices.flyouts.details.deviceDeployments.endDate"
+                                                                "devices.flyouts.details.deviceDeployments.date"
                                                             )}
                                                         </Cell>
                                                     </Row>
@@ -1061,18 +1118,23 @@ export class DeviceDetails extends Component {
                                                         (deployment, idx) => (
                                                             <Row key={idx}>
                                                                 <Cell className="col-4">
+                                                                    <Hyperlink
+                                                                        href={`/deployments/${deployment.deploymentId}/false`}
+                                                                        target="_blank"
+                                                                    >
+                                                                        {
+                                                                            deployment.deploymentName
+                                                                        }
+                                                                    </Hyperlink>
+                                                                </Cell>
+                                                                <Cell className="col-4">
                                                                     {
                                                                         deployment.firmwareVersion
                                                                     }
                                                                 </Cell>
                                                                 <Cell className="col-4">
                                                                     {formatTime(
-                                                                        deployment.startTime
-                                                                    )}
-                                                                </Cell>
-                                                                <Cell className="col-4">
-                                                                    {formatTime(
-                                                                        deployment.endTime
+                                                                        deployment.date
                                                                     )}
                                                                 </Cell>
                                                             </Row>

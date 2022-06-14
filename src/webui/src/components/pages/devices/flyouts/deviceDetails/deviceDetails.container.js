@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import { connect } from "react-redux";
-import { withNamespaces } from "react-i18next";
+import { withTranslation } from "react-i18next";
 import { DeviceDetails } from "./deviceDetails";
 import {
     redux as appRedux,
@@ -18,6 +18,7 @@ import {
 } from "store/reducers/rulesReducer";
 import {
     getDeviceById,
+    getDeviceByConditionById,
     getDeviceModuleStatus,
     getDeviceModuleStatusPendingStatus,
     getDeviceModuleStatusError,
@@ -27,7 +28,9 @@ import {
 
 // Pass the device details
 const mapStateToProps = (state, props) => ({
-        device: getDeviceById(state, props.deviceId),
+        device: props.isDeviceSearch
+            ? getDeviceByConditionById(state, props.deviceId)
+            : getDeviceById(state, props.deviceId),
         isRulesPending: getRulesPendingStatus(state),
         rules: getRulesEntities(state),
         rulesLastUpdated: getRulesLastUpdated(state),
@@ -54,6 +57,6 @@ const mapStateToProps = (state, props) => ({
             dispatch(appRedux.actions.updateTimeInterval(timeInterval)),
     });
 
-export const DeviceDetailsContainer = withNamespaces()(
+export const DeviceDetailsContainer = withTranslation()(
     connect(mapStateToProps, mapDispatchToProps)(DeviceDetails)
 );

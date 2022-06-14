@@ -99,7 +99,6 @@ namespace Mmm.Iot.IdentityGateway.WebService.Controllers
         }
 
         [HttpPut("ActiveDeviceGroup/{value}")]
-        [Authorize("UserManage")]
         public async Task<UserSettingsModel> PutUserActiveDeviceGroupAsync(string value)
         {
             return await this.PutAsync(this.GetClaimsUserId(), this.GetUserActiveDeviceGroupKey(), value);
@@ -141,6 +140,12 @@ namespace Mmm.Iot.IdentityGateway.WebService.Controllers
         public UserSettingsModel GetLatestBuildNumber()
         {
             return new UserSettingsModel() { Value = this.config.Global.BuildNumber.ToString() };
+        }
+
+        [HttpGet("DashboardMode")]
+        public UserSettingsModel GetDashboardMode()
+        {
+            return new UserSettingsModel() { Value = this.config.Global.LoadGrafanaDashboard.ToString() };
         }
 
         private string GetUserActiveDeviceGroupKey()

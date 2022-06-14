@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { withNamespaces } from "react-i18next";
+import { withTranslation } from "react-i18next";
 import { connect } from "react-redux";
 import { Deployments } from "./deployments";
 import {
@@ -16,6 +16,7 @@ import {
     epics as appEpics,
     getActiveDeviceQueryConditions,
     getActiveDeviceGroupId,
+    getUserCurrentTenant,
 } from "store/reducers/appReducer";
 
 // Pass the global info needed
@@ -27,6 +28,7 @@ const mapStateToProps = (state) => ({
         activeDeviceQueryConditions: getActiveDeviceQueryConditions(state),
         allActiveDeployments: getAllDeployments(state),
         activeDeviceGroupId: getActiveDeviceGroupId(state),
+        currentTenantId: getUserCurrentTenant(state),
     }),
     // Wrap the dispatch methods
     mapDispatchToProps = (dispatch) => ({
@@ -36,8 +38,10 @@ const mapStateToProps = (state) => ({
             dispatch(appRedux.actions.updateCurrentWindow(currentWindow)),
         logEvent: (diagnosticsModel) =>
             dispatch(appEpics.actions.logEvent(diagnosticsModel)),
+        checkTenantAndSwitch: (payload) =>
+            dispatch(appRedux.actions.checkTenantAndSwitch(payload)),
     });
 
-export const DeploymentsContainer = withNamespaces()(
+export const DeploymentsContainer = withTranslation()(
     connect(mapStateToProps, mapDispatchToProps)(Deployments)
 );

@@ -9,6 +9,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Mmm.Iot.Common.Services.Config;
 using Mmm.Iot.IdentityGateway.Services;
 using Mmm.Iot.IdentityGateway.Services.Models;
 using SendGrid;
@@ -24,12 +25,16 @@ namespace Mmm.Iot.IdentityGateway.Services.Helpers
         private const string DefaultSubject = "Invitation to IoT Platform";
         private const string DefaultMessageBody = "Tap the button below to accept this invitation. If you did not expect an invitation, you can delete this email.";
         private readonly ILogger logger;
+        private readonly AppConfig appConfig;
+        private string inviteFromEmail;
         private UserSettingsContainer userSettingsContainer;
 
-        public InviteHelpers(ILogger<InviteHelpers> logger, UserSettingsContainer userSettingsContainer)
+        public InviteHelpers(ILogger<InviteHelpers> logger, UserSettingsContainer userSettingsContainer, AppConfig appConfig)
         {
             this.logger = logger;
             this.userSettingsContainer = userSettingsContainer;
+            this.appConfig = appConfig;
+            this.inviteFromEmail = string.IsNullOrWhiteSpace(this.appConfig.Global.InviteFromEmail) ? DefaultFromEmail : this.appConfig.Global.InviteFromEmail;
         }
 
         public async Task<UserSettingsModel> CreateUserSettings(Invitation invitation, string userId)
@@ -47,7 +52,7 @@ namespace Mmm.Iot.IdentityGateway.Services.Helpers
         {
             var msg = new SendGridMessage();
 
-            msg.SetFrom(new EmailAddress(invitation.FromEmail ?? DefaultFromEmail, invitation.FromMessage ?? DefaultFromMessage));
+            msg.SetFrom(new EmailAddress(invitation.FromEmail ?? this.inviteFromEmail, invitation.FromMessage ?? DefaultFromMessage));
 
             var recipients = new List<EmailAddress>
             {

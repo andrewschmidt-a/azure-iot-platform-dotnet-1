@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import "rxjs";
-import { Observable } from "rxjs";
+import { of } from "rxjs";
 import moment from "moment";
 import { schema, normalize } from "normalizr";
 import update from "immutability-helper";
@@ -20,14 +20,14 @@ import {
     setPending,
     getPending,
     getError,
+    toActionCreator,
 } from "store/utilities";
 import { formatConditions } from "utilities";
+import { catchError, map, takeUntil } from "rxjs/operators";
 
 // ========================= Epics - START
 const handleError = (fromAction) => (error) =>
-        Observable.of(
-            redux.actions.registerError(fromAction.type, { error, fromAction })
-        ),
+        of(redux.actions.registerError(fromAction.type, { error, fromAction })),
     cellResponse = (response, error) => ({ response, error });
 
 export const epics = createEpicScenario({
@@ -35,17 +35,10 @@ export const epics = createEpicScenario({
     fetchRules: {
         type: "RULES_FETCH",
         epic: (fromAction) =>
-            TelemetryService.getRules({ includeDeleted: true })
-                .flatMap((rules) =>
-                    Observable.from(rules)
-                        .flatMap(({ id, groupId }) => [
-                            epics.actions.fetchRuleLastTriggered(id),
-                        ])
-                        .startWith(
-                            redux.actions.updateRules(rules, { fromAction })
-                        )
-                )
-                .catch(handleError(fromAction)),
+            TelemetryService.getRules({ includeDeleted: false }).pipe(
+                map(toActionCreator(redux.actions.updateRules, fromAction)),
+                catchError(handleError(fromAction))
+            ),
     },
 
     fetchRuleLastTriggered: {
@@ -54,22 +47,23 @@ export const epics = createEpicScenario({
             TelemetryService.getAlertsForRule(fromAction.payload, {
                 order: "desc",
                 limit: 1,
-            })
-                .map(([alert]) =>
+            }).pipe(
+                map(([alert]) =>
                     redux.actions.updateRuleLastTrigger({
                         id: fromAction.payload,
                         lastTrigger: cellResponse(alert.dateModified),
                     })
-                )
-                .takeUntil(action$.ofType(epics.actionTypes.fetchRules))
-                .catch((error) =>
-                    Observable.of(
+                ),
+                takeUntil(action$.ofType(epics.actionTypes.fetchRules)),
+                catchError((error) =>
+                    of(
                         redux.actions.updateRuleLastTrigger({
                             id: fromAction.payload,
                             lastTrigger: cellResponse(undefined, error),
                         })
                     )
-                ),
+                )
+            ),
     },
 });
 // ========================= Epics - END
@@ -107,6 +101,13 @@ const ruleSchema = new schema.Entity("rules"),
         });
     },
     updateRulesReducer = (state, { payload, fromAction }) => {
+        payload.forEach((rule) => {
+            if (rule.lastTrigger) {
+                rule.lastTrigger = cellResponse(rule.lastTrigger);
+            } else {
+                rule.lastTrigger = cellResponse(undefined, "error");
+            }
+        });
         const {
             entities: { rules = {} },
             result,
@@ -118,13 +119,13 @@ const ruleSchema = new schema.Entity("rules"),
             ...setPending(fromAction.type, false),
         });
     },
-    updateCountReducer = (state, { payload: { id, count } }) =>
-        update(state, {
-            entities: { [id]: { count: { $set: count } } },
-        }),
     updateLastTriggerReducer = (state, { payload: { id, lastTrigger } }) =>
         update(state, {
             entities: { [id]: { lastTrigger: { $set: lastTrigger } } },
+        }),
+    updateCountReducer = (state, { payload: { id, count } }) =>
+        update(state, {
+            entities: { [id]: { count: { $set: count } } },
         }),
     /* Action types that cause a pending flag */
     fetchableTypes = [epics.actionTypes.fetchRules];

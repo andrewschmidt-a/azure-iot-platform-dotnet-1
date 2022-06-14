@@ -5,8 +5,10 @@
         "profile": "Profile",
         "more": "More",
         "getStarted": "Get started",
-        "documentation": "Documentation",
-        "sendSuggestion": "Send a suggestion"
+        "iotAcceleratorDocumentation": "IoT Accelerator Documentation",
+        "publicDocumentation": "Public Documentation",
+        "innerSourceDocumentation": "InnerSource Documentation",
+        "devopsDocumentation": "Devops Documentation"
     },
     "globalNav": {
         "expand": "Expand Side Navigation",
@@ -28,7 +30,8 @@
         "rules": "Rules",
         "maintenance": "Maintenance",
         "packages": "Packages",
-        "deployments": "Deployments"
+        "deployments": "Deployments",
+        "columnMapping": "Column Mapping"
     },
     "errorFormat": "Error: {{message}}",
     "edgeAgentStatus": {
@@ -79,7 +82,7 @@
     },
     "deviceGroupDropDown": {
         "ariaLabel": "Device group",
-        "modals" : {
+        "modals": {
             "copyLink": {
                 "contextMenuName": "Copy Link",
                 "title": "Copy Link"
@@ -166,13 +169,17 @@
                     },
                     "deployment": {
                         "id": "When deploying your package, this value will be replaced by the ID of your deployment"
-                    }
+                    },
+                    "uniqueId": "Parent only. UniqueId used to attach to a Firmware Package creation."
                 }
             }
-        }
-    },
-    "helpFlyout": {
-        "title": "Documentation"
+        },
+        "editGrafanaDashboard":"Edit Grafana Dashboard",
+        "editGrafanaDashboardHeader": "Grafana Dashboard"
+   },
+   "helpFlyout": {
+        "platformTitle": "Platform Documentation",
+        "microsoftTitle": "Microsoft Documentation"
     },
     "profileFlyout": {
         "title": "User Profile",
@@ -194,7 +201,11 @@
             "tenantRoleColumn": "Role",
             "tenantActionColumn": "Action",
             "saveTenant": "Save",
-            "cancel": "Cancel"
+            "cancel": "Cancel",
+            "deleteTenantModal": {
+                "title": "Delete Tenant",
+                "confirmationMessage": "This action will delete the tenant permanently from the platform. Do you want to continue?"
+            }
         }
     },
     "resetActiveDeviceQuery": {
@@ -220,7 +231,8 @@
             "GT": "> Greater than",
             "LT": "< Less than",
             "GE": ">= Greater than or equal",
-            "LE": "<= Less than or equal"
+            "LE": "<= Less than or equal",
+            "LK": "Contains"
         },
         "value": "Value",
         "valuePlaceholder": "Enter value",
@@ -232,13 +244,21 @@
         },
         "remove": "Remove condition",
         "add": "Add condition",
+        "enterDeviceID": "Enter Device ID",
+        "deviceID": "Device ID",
+        "devices": "Devices",
         "errorMsg": {
             "fieldCantBeEmpty": "Field is required",
             "operatorCantBeEmpty": "Operator is required",
             "valueCantBeEmpty": "Value is required",
             "typeCantBeEmpty": "Type is required",
-            "selectedType": "Must be of the selected type"
-        }
+            "selectedType": "Must be of the selected type",
+            "statusCantBeEmpty": "Status is Required",
+            "deviceIDExists": "DeviceID already exists",
+            "cannotAddMoreThan50Devices": "Cannot add more than 50 devices"
+        },
+        "status": "Status",
+        "statusPlaceholder": "Select Status"
     },
     "deviceGroupsFlyout": {
         "actions": "Actions",
@@ -253,6 +273,9 @@
         "edit": "Edit a device group",
         "name": "Name",
         "namePlaceHolder": "Device group name",
+        "columnMapping": "Column Mapping",
+        "columnMappingPlaceholder": "Select column mapping",
+        "createNewMapping": "Create new",
         "save": "Save",
         "errorMsg": {
             "nameCantBeEmpty": "Name is required"
@@ -323,6 +346,9 @@
                 "header": "Telemetry",
                 "timezoneDisplay": "Displaying in local timezone:",
                 "limitExceededWarning": "Maximum number of messages received. Earlier data may be truncated."
+            },
+            "dashboard":{
+                "header": "Dashboard"
             }
         }
     },
@@ -339,7 +365,9 @@
             "userName": "Name",
             "userType": "Type",
             "userId": "Guid",
-            "userRole": "Role"
+            "userRole": "Role",
+            "createdBy": "Created By",
+            "dateCreated": "Date Created"
         },
         "flyouts": {
             "new": {
@@ -403,12 +431,18 @@
     },
     "devices": {
         "title": "Device Explorer",
+        "titleDescription": "Explore devices within the current device group.",
         "ariaLabel": "Search devices",
         "searchPlaceholder": "Search devices...",
         "noneFound": "No devices found.",
         "refresh": "Refresh",
+        "deviceSearchTitle": "Device Search",
+        "deviceSearchTitleDescription": "Search across all devices.",
+        "downloadDeviceReport": "Download",
+        "columnOptions":"Column Options",
         "showTelemetry": "Show telemetry",
         "returnToDevices": "Devices",
+        "loadMore": "Load more",
         "grid": {
             "connected": "Connected",
             "deviceName": "Device name",
@@ -485,9 +519,9 @@
                     "title": "Device Deployments",
                     "description": "Deployment History of device",
                     "noneExist": "No history present for this device",
-                    "firmwareVersion" : "Firmware Version",
-                    "startDate": "Start Date Time",
-                    "endDate": "End Date Time"
+                    "deploymentName": "Deployment name",
+                    "firmwareVersion": "Firmware Version",
+                    "date": "Date"
                 }
             },
             "delete": {
@@ -941,6 +975,7 @@
                 "name": "Name",
                 "deploymentStatus": "Deployment Status",
                 "firmware": "Firmware",
+                "previousFirmware": "Previous Firmware",
                 "lastMessage": "Last Message",
                 "start": "Start",
                 "end": "End"
@@ -1059,13 +1094,13 @@
         "firmware": "Firmware",
         "custom": "Custom"
     },
-  "modal": {
-    "delete": "Delete",
-    "cancel": "Cancel",
-    "close": "Close",
-    "copy": "Copy",
-    "ok": "Ok"
-  },
+    "modal": {
+        "delete": "Delete",
+        "cancel": "Cancel",
+        "close": "Close",
+        "copy": "Copy",
+        "ok": "Ok"
+    },
     "walkthrough": {
         "tabs": {
             "dashboard": "Dashboard",
@@ -1114,6 +1149,38 @@
         "panel": {
             "header": "Example Panel",
             "panelBody": "This is a new panel."
+        }
+    },
+    "columnMapping":{
+        "field": "Field",
+        "namePlaceHolder":"Enter Mapping Name",
+        "headerPlaceholder": "Enter Header Name",
+        "mappingPlaceholder": "Select Mapping",
+        "renderPlaceholder": "Select Renderer",
+        "descriptionPlaceholder": "Enter Description",
+        "errorMsg":{
+            "headerCannotBeEmpty": "Header Name is Required",
+            "nameIsDuplicated": "Name is Duplicated",
+            "mappingCannotBeEmpty": "Mapping is Required",
+            "mappingIsDuplicated": "Mapping is Duplicated",
+            "rendererCannotBeEmpty": "Renderer is Required"
+        },
+        "labels":{
+            "mappingName": "Column Mapping Name"
+        },
+        "delete": {
+            "title": "Delete",
+            "header": "Delete Column Mapping",
+            "description": "This action will delete the column mapping permanently from the platform.",
+            "summaryHeader": "Summary",
+            "affectedDeviceGroups": "Affected Device groups",
+            "addNewButton": "Add New",
+            "deleteButton": "Delete",
+            "apply": "Delete",
+            "cancel": "Cancel",
+            "close": "Close",
+            "onLabel": "Yes, delete the selected column mapping",
+            "offLabel": "No, do not delete the selected column mapping"
         }
     }
 }

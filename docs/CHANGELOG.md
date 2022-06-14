@@ -9,6 +9,70 @@ To easily get a list of committed changes between current master and the previou
 git log --oneline --no-decorate --topo-order ^<previousRelease> master
 where <previousRelease> is the release name e.g 5.1.0
 -->
+
+## [5.5.0] - 2021-10-08
+### Add
+ - Added ADX for telemetry and alert persistence
+ - Added Grafana for dashboarding
+
+### Fix
+ - Fixed alignment issues in device explorer page
+ - Updated icon for column mappings
+
+## [5.4.4] - 2021-08-31
+### Add
+ - React version upgrade changes (#334)
+ - Display Device Twin data in tables using new Column Mapping and Column Options
+ - Create Device Groups by DeviceId or DeviceName
+ - Expired sessions no longer require loging off
+ - Added audit data under User Management
+
+### Fix
+ - Non-compliant resources based on security recommendations
+ - Fixed Getlink issue on Device Explorer when using "Load more"
+ - Added changes for refreshing cache
+
+
+## [5.4.3] - 2020-02-02
+### Add
+ - Download data in Device Explorer and Device Search
+ - Show Previous Firmware Version in Deployment History
+ - Links between Device History (or firmware updates) and Deployments
+ - New Firmware Template Variables for use in Packages
+
+### Fix
+ - Resolved issues with Device History data
+ - Renamed 3rd column in Device History to Date instead of Last Update Date
+ - Ensurced ssh-keygen to generate keys in PEM format in CI/CD
+
+## [5.4.2] - 2020-01-18
+### Add
+- UI now supports unlimited devices
+- Start/stop toogle for loading additional devices with stats in toolbar
+- Device Search page to manage devices independent of Device Group
+- Highlights current tenant of settings flyout
+- Displays IoT Hub name on settings flyout
+- Updated documentation links
+- TenantId added to GetLink URL
+
+### Fix
+- Deployment now updates sys admins
+- Adds System Admins on new tenant creation
+- Improvements to cToken changes
+- Fixed add rule issue in WebUI
+- Readers can now change Device Group
+- JSON web keys now use=sig
+
+## [5.4.1] - 2020-10-14
+### Fix
+- Fixed performance issues reading "deleted" rules
+- Fixed rule deletion to delete rules
+- Upgraded versions of several dlls harden security 
+- Fixed rule and alarms 502 issue
+- Enabled grid cell text highlight
+- Addressed auto refresh on settings flyout
+- Force support for HTTPS in template
+
 ## [5.4.0] - 2020-10-05
 ### Add
 - Deployment history by Device
@@ -121,6 +185,11 @@ where <previousRelease> is the release name e.g 5.1.0
 - Application configuration uses Azure App Configuration service in addition to Azure Key Vault
 - Code base rearchitected to use common library and reduce duplication
 
+[5.5.0]: https://github.com/3mcloud/azure-iot-platform-dotnet/releases/tag/5.5.0
+[5.4.4]: https://github.com/3mcloud/azure-iot-platform-dotnet/releases/tag/5.4.4
+[5.4.3]: https://github.com/3mcloud/azure-iot-platform-dotnet/releases/tag/5.4.3
+[5.4.2]: https://github.com/3mcloud/azure-iot-platform-dotnet/releases/tag/5.4.2
+[5.4.1]: https://github.com/3mcloud/azure-iot-platform-dotnet/releases/tag/5.4.1
 [5.4.0]: https://github.com/3mcloud/azure-iot-platform-dotnet/releases/tag/5.4.0
 [5.3.0]: https://github.com/3mcloud/azure-iot-platform-dotnet/releases/tag/5.3.0
 [5.2.3]: https://github.com/3mcloud/azure-iot-platform-dotnet/releases/tag/5.2.3

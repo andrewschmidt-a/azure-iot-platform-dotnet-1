@@ -13,6 +13,7 @@ using Mmm.Iot.AsaManager.Services.Models;
 using Mmm.Iot.AsaManager.Services.Models.DeviceGroups;
 using Mmm.Iot.AsaManager.Services.Test.Helpers;
 using Mmm.Iot.Common.Services.Exceptions;
+using Mmm.Iot.Common.Services.External.AppConfiguration;
 using Mmm.Iot.Common.Services.External.BlobStorage;
 using Mmm.Iot.Common.Services.External.StorageAdapter;
 using Mmm.Iot.Common.TestHelpers;
@@ -29,6 +30,7 @@ namespace Mmm.Iot.AsaManager.Services.Test
         private Mock<IStorageAdapterClient> mockStorageAdapterClient;
         private Mock<IIotHubManagerClient> mockIotHubManagerClient;
         private Mock<ILogger<DeviceGroupsConverter>> mockLog;
+        private Mock<IAppConfigurationClient> mockConfig;
         private DeviceGroupsConverter converter;
         private CreateEntityHelper entityHelper;
 
@@ -38,6 +40,7 @@ namespace Mmm.Iot.AsaManager.Services.Test
             this.mockStorageAdapterClient = new Mock<IStorageAdapterClient>();
             this.mockIotHubManagerClient = new Mock<IIotHubManagerClient>();
             this.mockLog = new Mock<ILogger<DeviceGroupsConverter>>();
+            this.mockConfig = new Mock<IAppConfigurationClient>();
             this.rand = new Random();
             this.entityHelper = new CreateEntityHelper(this.rand);
 
@@ -78,7 +81,8 @@ namespace Mmm.Iot.AsaManager.Services.Test
             this.mockIotHubManagerClient
                 .Setup(c => c.GetListAsync(
                     It.IsAny<IEnumerable<DeviceGroupConditionModel>>(),
-                    It.Is<string>(s => s == tenantId)))
+                    It.Is<string>(s => s == tenantId),
+                    It.IsAny<string>()))
                 .ReturnsAsync(new DeviceListModel { Items = new List<DeviceModel> { this.entityHelper.CreateDevice(), this.entityHelper.CreateDevice() } });  // return a device for each device group
 
             ConversionApiModel conversionResponse = await this.converter.ConvertAsync(tenantId);
@@ -100,7 +104,8 @@ namespace Mmm.Iot.AsaManager.Services.Test
                 .Verify(
                     c => c.GetListAsync(
                         It.IsAny<IEnumerable<DeviceGroupConditionModel>>(),
-                        It.Is<string>(s => s == tenantId)),
+                        It.Is<string>(s => s == tenantId),
+                        It.IsAny<string>()),
                     Times.Exactly(deviceGroups.Items.Count));
 
             Assert.Equal(conversionResponse.Entities, deviceGroups);
@@ -150,7 +155,8 @@ namespace Mmm.Iot.AsaManager.Services.Test
             this.mockIotHubManagerClient
                 .Setup(c => c.GetListAsync(
                     It.IsAny<IEnumerable<DeviceGroupConditionModel>>(),
-                    It.Is<string>(s => s == tenantId)))
+                    It.Is<string>(s => s == tenantId),
+                    It.IsAny<string>()))
                 .ReturnsAsync(new DeviceListModel { Items = new List<DeviceModel> { } });  // return empty device lists, should cause the exception
 
             Func<Task> conversion = async () => await this.converter.ConvertAsync(tenantId);

@@ -25,16 +25,26 @@ import {
     DeploymentsRouter,
 } from "./pages";
 import { IdentityGatewayService } from "services";
+import { ColumnMappingsRouter } from "./pages/columnmapping/columnmapping.router";
+import { initializeIcons } from "@fluentui/font-icons-mdl2";
+import { GrafanaDashboardContainer } from "./pages/dashboard/grafanaDashboard.container";
+
+initializeIcons();
 
 class App extends Component {
     constructor(props) {
         super(props);
 
-        this.state = { openFlyout: "" };
+        this.state = { openFlyout: "", isGrafana: false };
     }
 
-    componentWillMount() {
+    UNSAFE_componentWillMount() {
         IdentityGatewayService.VerifyAndRefreshCache();
+        IdentityGatewayService.getDashboardMode().subscribe((value) => {
+            this.setState({
+                isGrafana: (value && value.toUpperCase()) === "TRUE",
+            });
+        });
     }
 
     closeFlyout = () => this.setState({ openFlyout: "" });
@@ -52,13 +62,22 @@ class App extends Component {
                     exact: true,
                     svg: svgs.tabs.dashboard,
                     labelId: "tabs.dashboard",
-                    component: DashboardContainer,
+                    component: this.state.isGrafana
+                        ? GrafanaDashboardContainer
+                        : DashboardContainer,
                 },
                 {
                     to: "/devices",
                     exact: false,
                     svg: svgs.tabs.devices,
                     labelId: "tabs.devices",
+                    component: DevicesRouter,
+                },
+                {
+                    to: "/deviceSearch",
+                    exact: false,
+                    svg: svgs.tabs.devicesSearch,
+                    labelId: "Device Search",
                     component: DevicesRouter,
                 },
                 {
@@ -96,6 +115,14 @@ class App extends Component {
                     labelId: "tabs.maintenance",
                     component: MaintenanceContainer,
                 },
+                {
+                    to: "/columnMapping",
+                    exact: false,
+                    svg: svgs.tabs.columnMapping,
+                    labelId: "tabs.columnMapping",
+                    component: ColumnMappingsRouter,
+                    permission: permissions.updateDeviceGroups,
+                },
             ],
             crumbsConfig = [
                 {
@@ -112,6 +139,20 @@ class App extends Component {
                         { to: "/devices", labelId: "tabs.devices" },
                         {
                             to: "/devices/telemetry",
+                            labelId: "devices.telemetry",
+                        },
+                    ],
+                },
+                {
+                    path: "/deviceSearch",
+                    crumbs: [{ to: "/deviceSearch", labelId: "Device Search" }],
+                },
+                {
+                    path: "/deviceSearch/telemetry",
+                    crumbs: [
+                        { to: "/deviceSearch", labelId: "tabs.devices" },
+                        {
+                            to: "/deviceSearch/telemetry",
                             labelId: "devices.telemetry",
                         },
                     ],

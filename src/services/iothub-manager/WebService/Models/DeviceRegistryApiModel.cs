@@ -31,6 +31,8 @@ namespace Mmm.Iot.IoTHubManager.WebService.Models
             this.Enabled = device.Enabled;
             this.IsEdgeDevice = device.IsEdgeDevice;
             this.LastStatusUpdated = device.LastStatusUpdated;
+            this.DeviceCreatedDate = device.DeviceCreatedDate;
+            this.ModifiedDate = device.ModifiedDate;
             this.IoTHubHostName = device.IoTHubHostName;
             this.Authentication = new AuthenticationMechanismApiModel(
                 device.Authentication ?? new AuthenticationMechanismServiceModel());
@@ -41,6 +43,11 @@ namespace Mmm.Iot.IoTHubManager.WebService.Models
                 this.Properties = new TwinPropertiesApiModel(device.Twin.DesiredProperties, device.Twin.ReportedProperties);
                 this.Tags = device.Twin.Tags;
                 this.IsSimulated = device.Twin.IsSimulated;
+            }
+
+            if (device.PreviousTwin != null)
+            {
+                this.PreviousProperties = new TwinPropertiesApiModel(device.PreviousTwin.DesiredProperties, device.PreviousTwin.ReportedProperties);
             }
         }
 
@@ -65,6 +72,12 @@ namespace Mmm.Iot.IoTHubManager.WebService.Models
         [JsonProperty(PropertyName = "LastStatusUpdated")]
         public DateTime LastStatusUpdated { get; set; }
 
+        [JsonProperty(PropertyName = "DeviceCreatedDate")]
+        public DateTime? DeviceCreatedDate { get; set; }
+
+        [JsonProperty(PropertyName = "ModifiedDate")]
+        public DateTime? ModifiedDate { get; set; }
+
         [JsonProperty(PropertyName = "IoTHubHostName")]
         public string IoTHubHostName { get; set; }
 
@@ -78,6 +91,9 @@ namespace Mmm.Iot.IoTHubManager.WebService.Models
 
         [JsonProperty(PropertyName = "Properties", NullValueHandling = NullValueHandling.Ignore)]
         public TwinPropertiesApiModel Properties { get; set; }
+
+        [JsonProperty(PropertyName = "PreviousProperties", NullValueHandling = NullValueHandling.Ignore)]
+        public TwinPropertiesApiModel PreviousProperties { get; set; }
 
         [JsonProperty(PropertyName = "Tags", NullValueHandling = NullValueHandling.Ignore)]
         public Dictionary<string, JToken> Tags { get; set; }
@@ -144,6 +160,8 @@ namespace Mmm.Iot.IoTHubManager.WebService.Models
                 enabled: this.Enabled,
                 isEdgeDevice: this.IsEdgeDevice,
                 lastStatusUpdated: this.LastStatusUpdated,
+                deviceCreatedDate: this.DeviceCreatedDate,
+                modifiedDate: this.ModifiedDate,
                 twin: twinModel,
                 ioTHubHostName: this.IoTHubHostName,
                 authentication: this.Authentication == null ? null : this.Authentication.ToServiceModel());

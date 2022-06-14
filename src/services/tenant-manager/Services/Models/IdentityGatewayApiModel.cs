@@ -20,6 +20,19 @@ namespace Mmm.Iot.TenantManager.Services.Models
             this.Roles = roles;
         }
 
+        public IdentityGatewayApiModel(string roles, string name)
+        {
+            this.Roles = roles;
+            this.Name = name;
+        }
+
+        public IdentityGatewayApiModel(string roles, string name, string createdBy)
+        {
+            this.Roles = roles;
+            this.Name = name;
+            this.CreatedBy = createdBy;
+        }
+
         public string Roles { get; set; }
 
         public string UserId { get; set; }
@@ -28,7 +41,11 @@ namespace Mmm.Iot.TenantManager.Services.Models
 
         public string PartitionKey { get; set; }
 
+        public string Name { get; set; }
+
         public string RowKey { get; set; }
+
+        public string CreatedBy { get; set; }
 
         public List<string> RoleList
         {

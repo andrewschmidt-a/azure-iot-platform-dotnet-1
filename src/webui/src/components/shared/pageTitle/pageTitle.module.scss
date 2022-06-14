@@ -1,0 +1,19 @@
+// Copyright (c) Microsoft. All rights reserved.
+
+@import 'src/styles/variables';
+@import 'src/styles/mixins';
+@import 'src/styles/themes';
+
+.page-title {
+  margin: 0;
+  @include rem-fallback(margin-right, 10px);
+  @include rem-fallback(padding-bottom, 10px);
+
+  .page-title-header {
+    font-weight: bold;
+  }  
+  
+  @include themify($themes) {
+    color: themed('colorHeaderText');
+  }
+}

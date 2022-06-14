@@ -8,6 +8,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
+using Mmm.Iot.Common.Services.Config;
 using Mmm.Iot.Common.Services.Exceptions;
 using Mmm.Iot.Common.Services.Filters;
 using Mmm.Iot.DeviceTelemetry.Services;
@@ -20,17 +21,20 @@ namespace Mmm.Iot.DeviceTelemetry.WebService.Controllers
     [TypeFilter(typeof(ExceptionsFilterAttribute))]
     public class AlarmsController : Controller
     {
-        private const int DeviceLimit = 1000;
         private const int DeleteLimit = 1000;
         private readonly IAlarms alarmService;
         private readonly ILogger logger;
+        private readonly AppConfig appConfig;
+        private int deviceLimit = 1000;
 
         public AlarmsController(
             IAlarms alarmService,
-            ILogger<AlarmsController> logger)
+            ILogger<AlarmsController> logger,
+            AppConfig appConfig)
         {
             this.alarmService = alarmService;
             this.logger = logger;
+            this.appConfig = appConfig;
         }
 
         [HttpGet("v1/[controller]")]
@@ -111,7 +115,7 @@ namespace Mmm.Iot.DeviceTelemetry.WebService.Controllers
 
         [HttpPost("v1/[controller]!delete")]
         [Authorize("DeleteAlarms")]
-        public void Delete([FromBody] AlarmIdListApiModel alarmList)
+        public async Task DeleteAsync([FromBody] AlarmIdListApiModel alarmList)
         {
             if (alarmList.Items == null || !alarmList.Items.Any())
             {
@@ -123,7 +127,7 @@ namespace Mmm.Iot.DeviceTelemetry.WebService.Controllers
                 throw new InvalidInputException("Cannot delete more than 1000 alarms");
             }
 
-            this.alarmService.Delete(alarmList.Items);
+            await this.alarmService.Delete(alarmList.Items);
         }
 
         private async Task<AlarmListApiModel> ListHelperAsync(
@@ -152,10 +156,22 @@ namespace Mmm.Iot.DeviceTelemetry.WebService.Controllers
                 limit = 1000;
             }
 
-            if (deviceIds.Length > DeviceLimit)
+            bool processIOTHubBeyondLimit = false;
+            try
+            {
+                this.deviceLimit = this.appConfig.Global.Limits.MaximumDeviceCount;
+                processIOTHubBeyondLimit = this.appConfig.Global.Limits.ProcessIOTHubBeyondLimit;
+            }
+            catch
+            {
+                this.deviceLimit = 1000;
+                processIOTHubBeyondLimit = false;
+            }
+
+            if (!processIOTHubBeyondLimit && deviceIds.Length > this.deviceLimit)
             {
                 this.logger.LogWarning("The client requested too many devices {count}", deviceIds.Length);
-                throw new BadRequestException("The number of devices cannot exceed " + DeviceLimit);
+                throw new BadRequestException("The number of devices cannot exceed " + this.deviceLimit);
             }
 
             List<Alarm> alarmsList = await this.alarmService.ListAsync(

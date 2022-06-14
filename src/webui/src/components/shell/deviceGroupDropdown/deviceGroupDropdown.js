@@ -7,7 +7,8 @@ import { toDiagnosticsModel } from "services/models";
 import { svgs, compareByProperty } from "utilities";
 import { ComponentArray, Btn, CopyModal } from "components/shared";
 
-import "./deviceGroupDropdown.scss";
+const classnames = require("classnames/bind");
+const css = classnames.bind(require("./deviceGroupDropdown.module.scss"));
 
 const closedModalState = {
     openModalName: undefined,
@@ -27,6 +28,12 @@ export class DeviceGroupDropdown extends Component {
         // Don't try to update the device group if the device id doesn't exist
         if (deviceGroupIds.indexOf(value) > -1) {
             this.props.changeDeviceGroup(value);
+            if (this.props.updateLoadMore) {
+                this.props.updateLoadMore();
+            }
+            if (this.props.updateColumns) {
+                this.props.updateColumns(value);
+            }
         }
         this.props.logEvent(toDiagnosticsModel("DeviceFilter_Select", {}));
     };
@@ -41,7 +48,9 @@ export class DeviceGroupDropdown extends Component {
         const { t } = this.props;
         const link =
             window.location.href +
-            "?deviceGroupId=" +
+            "?tenantId=" +
+            this.props.currentTenantId +
+            "&deviceGroupId=" +
             this.props.activeDeviceGroupId;
         if (this.state.openModalName === "copy-link") {
             return (
@@ -67,11 +76,28 @@ export class DeviceGroupDropdown extends Component {
                 value: id,
             }));
 
-    render() {
+    componentDidMount() {
         const { deviceGroups } = this.props,
             deviceGroupIds = deviceGroups.map(({ id }) => id);
+        if (
+            this.state.deviceGroupIdFromUrl &&
+            deviceGroups &&
+            deviceGroups.length > 0 &&
+            deviceGroupIds.indexOf(this.state.deviceGroupIdFromUrl) <= -1
+        ) {
+            alert("Devicegroup doesn't exist");
+        }
+    }
+
+    render() {
+        const { deviceGroups, deviceStatistics } = this.props,
+            deviceGroupIds = deviceGroups.map(({ id }) => id);
         let activeDeviceGroupId = this.props.activeDeviceGroupId;
-        if (deviceGroups && this.state.deviceGroupIdFromUrl) {
+        if (
+            deviceGroups &&
+            deviceGroups.length > 0 &&
+            this.state.deviceGroupIdFromUrl
+        ) {
             if (deviceGroupIds.indexOf(this.state.deviceGroupIdFromUrl) > -1) {
                 this.props.changeDeviceGroup(this.state.deviceGroupIdFromUrl);
                 activeDeviceGroupId = this.state.deviceGroupIdFromUrl;
@@ -81,16 +107,16 @@ export class DeviceGroupDropdown extends Component {
             <ComponentArray>
                 <SelectInput
                     name="device-group-dropdown"
-                    className="device-group-dropdown"
+                    className={css("device-group-dropdown")}
                     attr={{
                         select: {
-                            className: "device-group-dropdown-select",
+                            className: css("device-group-dropdown-select"),
                             "aria-label": this.props.t(
                                 "deviceGroupDropDown.ariaLabel"
                             ),
                         },
                         chevron: {
-                            className: "device-group-dropdown-chevron",
+                            className: css("device-group-dropdown-chevron"),
                         },
                     }}
                     options={this.deviceGroupsToOptions(deviceGroups)}
@@ -100,6 +126,21 @@ export class DeviceGroupDropdown extends Component {
                 <Btn svg={svgs.copyLink} onClick={this.openModal("copy-link")}>
                     Get Link
                 </Btn>
+                <div>
+                    <label className={css("devices-loaded-label")}>
+                        Devices Loaded
+                    </label>
+                    <p className={css("devices-loaded-value")}>
+                        {" "}
+                        {deviceStatistics
+                            ? deviceStatistics.loadedDeviceCount
+                            : undefined}
+                        /{" "}
+                        {deviceStatistics
+                            ? deviceStatistics.totalDeviceCount
+                            : undefined}
+                    </p>
+                </div>
                 {this.getOpenModal()}
             </ComponentArray>
         );

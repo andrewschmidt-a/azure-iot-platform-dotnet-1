@@ -13,6 +13,7 @@ import {
 } from "components/shared/pcsGrid/pcsGridConfig";
 import { getPackageTypeTranslation, getConfigTypeTranslation } from "utilities";
 import { INACTIVE_PACKAGE_TAG } from "services/configService";
+import { CopyToClipBoardRenderer } from "components/shared/cellRenderers/copyToClipBoardRenderer/copyToClipBoardRenderer";
 
 const { checkForEmpty } = gridValueFormatters;
 
@@ -21,13 +22,18 @@ export const packagesColumnDefs = {
         lockPosition: checkboxColumn.lockPosition,
         cellClass: checkboxColumn.cellClass,
         headerClass: checkboxColumn.headerClass,
-        suppressResize: checkboxColumn.suppressResize,
+        resizable: checkboxColumn.resizable,
         checkboxSelection: checkboxColumn.checkboxSelection,
         headerCheckboxSelection: checkboxColumn.headerCheckboxSelection,
         headerCheckboxSelectionFilteredOnly:
             checkboxColumn.headerCheckboxSelectionFilteredOnly,
         suppressMovable: checkboxColumn.suppressMovable,
         width: 50,
+    },
+    id: {
+        headerName: " ",
+        field: "id",
+        cellRendererFramework: CopyToClipBoardRenderer,
     },
     name: {
         headerName: "packages.grid.name",
@@ -81,6 +87,13 @@ export const packagesColumnDefs = {
         field: "lastModifiedBy",
         valueFormatter: ({ value }) => checkForEmpty(value),
     },
+};
+
+/** Default column definitions*/
+export const defaultColDef = {
+    sortable: true,
+    lockPinned: true,
+    resizable: true,
 };
 
 export const defaultPackagesGridProps = {

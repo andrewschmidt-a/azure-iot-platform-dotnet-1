@@ -49,7 +49,9 @@ import RuleEnabledIconPath from "assets/icons/ruleEnabled.svg";
 import SIMManagementIconPath from "assets/icons/SIMManagement.svg";
 import SearchIconPath from "assets/icons/searchIcon.svg";
 import SettingsIconPath from "assets/icons/settings.svg";
+import StarIconPath from "assets/icons/star.svg";
 import SimulatedDeviceIconPath from "assets/icons/simulatedDevice.svg";
+import TabColumnMappingIconPath from "assets/icons/tabColumnMapping.svg";
 import TabDashboardIconPath from "assets/icons/tabDashboard.svg";
 import TabDevicesIconPath from "assets/icons/tabDevices.svg";
 import TabDeploymentsIconPath from "assets/icons/tabDeployments.svg";
@@ -65,8 +67,10 @@ import MMMLogoPath from "assets/icons/3M_wordmark.svg";
 /** A helper object mapping svg names to their paths */
 export const svgs = {
     tabs: {
+        columnMapping: TabColumnMappingIconPath,
         dashboard: TabDashboardIconPath,
         devices: TabDevicesIconPath,
+        devicesSearch: SearchIconPath,
         deployments: TabDeploymentsIconPath,
         maintenance: TabMaintenanceIconPath,
         packages: TabPackagesIconPath,
@@ -126,6 +130,7 @@ export const svgs = {
     settings: SettingsIconPath,
     simmanagement: SIMManagementIconPath,
     simulatedDevice: SimulatedDeviceIconPath,
+    star: StarIconPath,
     trash: TrashIconPath,
     upload: UploadIconPath,
     warning: WarningIconPath,

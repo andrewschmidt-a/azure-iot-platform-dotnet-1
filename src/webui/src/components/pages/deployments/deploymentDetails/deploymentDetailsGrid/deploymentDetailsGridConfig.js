@@ -28,6 +28,11 @@ export const deploymentDetailsColumnDefs = {
         field: "firmware",
         valueFormatter: ({ value }) => checkForEmpty(value),
     },
+    previousFirmware: {
+        headerName: "deployments.details.grid.previousFirmware",
+        field: "previousFirmware",
+        valueFormatter: ({ value }) => checkForEmpty(value),
+    },
     lastMessage: {
         headerName: "deployments.details.grid.lastMessage",
         field: "code",
@@ -46,13 +51,18 @@ export const deploymentDetailsColumnDefs = {
     },
 };
 
+/** Default column definitions*/
+export const defaultColDef = {
+    sortable: true,
+    lockPinned: true,
+    resizable: true,
+};
+
 export const defaultDeploymentDetailsGridProps = {
     enableColResize: true,
     pagination: true,
     paginationPageSize: Config.paginationPageSize,
     sizeColumnsToFit: true,
-    deltaRowDataMode: true,
-    enableSorting: true,
-    unSortIcon: true,
+    immutableData: true,
     domLayout: "autoHeight",
 };

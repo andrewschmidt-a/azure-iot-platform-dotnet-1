@@ -17,15 +17,15 @@ import {
     PageTitle,
     Protected,
     RefreshBarContainer as RefreshBar,
-    SearchInput,
 } from "components/shared";
 import { NewRuleFlyout } from "./flyouts";
-import { svgs, getDeviceGroupParam } from "utilities";
+import { svgs, getDeviceGroupParam, getTenantIdParam } from "utilities";
 import { toSinglePropertyDiagnosticsModel } from "services/models";
 import { CreateDeviceQueryBtnContainer as CreateDeviceQueryBtn } from "components/shell/createDeviceQueryBtn";
-
-import "./rules.scss";
 import { IdentityGatewayService } from "services";
+
+const classnames = require("classnames/bind");
+const css = classnames.bind(require("./rules.module.scss"));
 
 const closedFlyoutState = {
     openFlyoutName: "",
@@ -55,18 +55,21 @@ export class Rules extends Component {
         }
     }
 
-    componentWillMount() {
-        if (this.props.location.search) {
+    UNSAFE_componentWillMount() {
+        if (this.props.location && this.props.location.search) {
+            const tenantId = getTenantIdParam(this.props.location);
+            this.props.checkTenantAndSwitch({
+                tenantId: tenantId,
+                redirectUrl: window.location.href,
+            });
             this.setState({
-                selectedDeviceGroupId: getDeviceGroupParam(
-                    this.props.location.search
-                ),
+                selectedDeviceGroupId: getDeviceGroupParam(this.props.location),
             });
         }
         IdentityGatewayService.VerifyAndRefreshCache();
     }
 
-    componentWillReceiveProps(nextProps) {
+    UNSAFE_componentWillReceiveProps(nextProps) {
         if (
             nextProps.isPending &&
             nextProps.isPending !== this.props.isPending
@@ -86,7 +89,7 @@ export class Rules extends Component {
     }
 
     componentDidMount() {
-        if (this.state.selectedDeviceGroupId) {
+        if (this.state.selectedDeviceGroupId && this.props.location) {
             window.history.replaceState(
                 {},
                 document.title,
@@ -107,12 +110,6 @@ export class Rules extends Component {
     };
 
     onGridReady = (gridReadyEvent) => (this.rulesGridApi = gridReadyEvent.api);
-
-    searchOnChange = ({ target: { value } }) => {
-        if (this.rulesGridApi) {
-            this.rulesGridApi.setQuickFilter(value);
-        }
-    };
 
     onContextMenuChange = (contextBtns) => this.setState({ contextBtns });
 
@@ -141,6 +138,7 @@ export class Rules extends Component {
                 activeDeviceGroupId,
                 location,
                 userPermissions,
+                currentTenantId,
             } = this.props,
             gridProps = {
                 onGridReady: this.onGridReady,
@@ -154,6 +152,7 @@ export class Rules extends Component {
                 location: location,
                 userPermissions: userPermissions,
                 rulesGridApi: this.rulesGridApi,
+                currentTenantId: currentTenantId,
             };
         return (
             <ComponentArray>
@@ -199,14 +198,9 @@ export class Rules extends Component {
                     </ContextMenu>
                 )}
                 {alerting.jobState === "Running" && (
-                    <PageContent className="rules-container">
+                    <PageContent className={css("rules-container")}>
                         <PageTitle titleValue={t("rules.title")} />
                         {!!error && <AjaxError t={t} error={error} />}
-                        <SearchInput
-                            onChange={this.searchOnChange}
-                            placeholder={t("rules.searchPlaceholder")}
-                            aria-label={t("rules.ariaLabel")}
-                        />
                         {!error && <RulesGrid {...gridProps} />}
                         {this.state.openFlyoutName === "newRule" && (
                             <NewRuleFlyout

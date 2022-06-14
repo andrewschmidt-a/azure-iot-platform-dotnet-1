@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import { connect } from "react-redux";
-import { withNamespaces } from "react-i18next";
+import { withTranslation } from "react-i18next";
 import { Rules } from "./rules";
 import {
     epics as rulesEpics,
@@ -20,6 +20,7 @@ import {
     getActiveDeviceQueryConditions,
     getActiveDeviceGroupId,
     getUser,
+    getUserCurrentTenant,
 } from "store/reducers/appReducer";
 
 // Pass the devices status
@@ -31,12 +32,12 @@ const mapStateToProps = (state) => ({
         isPending: getRulesPendingStatus(state),
         deviceGroups: getDeviceGroups(state),
         lastUpdated: getRulesLastUpdated(state),
-        applicationPermissionsAssigned: getApplicationPermissionsAssigned(
-            state
-        ),
+        applicationPermissionsAssigned:
+            getApplicationPermissionsAssigned(state),
         activeDeviceQueryConditions: getActiveDeviceQueryConditions(state),
         activeDeviceGroupId: getActiveDeviceGroupId(state),
         userPermissions: getUser(state).permissions,
+        currentTenantId: getUserCurrentTenant(state),
     }),
     // Wrap the dispatch method
     mapDispatchToProps = (dispatch) => ({
@@ -45,8 +46,10 @@ const mapStateToProps = (state) => ({
             dispatch(appRedux.actions.updateCurrentWindow(currentWindow)),
         logEvent: (diagnosticsModel) =>
             dispatch(appEpics.actions.logEvent(diagnosticsModel)),
+        checkTenantAndSwitch: (payload) =>
+            dispatch(appRedux.actions.checkTenantAndSwitch(payload)),
     });
 
-export const RulesContainer = withNamespaces()(
+export const RulesContainer = withTranslation()(
     connect(mapStateToProps, mapDispatchToProps)(Rules)
 );

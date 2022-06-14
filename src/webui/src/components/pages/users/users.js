@@ -14,16 +14,17 @@ import {
     PageTitle,
     Protected,
     RefreshBarContainer as RefreshBar,
-    SearchInput,
 } from "components/shared";
 import { UserNewContainer } from "./flyouts/userNew";
 import { UserNewServicePrincipalContainer } from "./flyouts/userNewServicePrincipal/userNewServicePrincipal.container";
 import { svgs } from "utilities";
 
-import "./users.scss";
 import { SystemAdminNewContainer } from "./flyouts/systemAdminNew";
 import { SystemAdminDeleteContainer } from "./flyouts/systemAdminDelete";
 import { IdentityGatewayService } from "services";
+
+const classnames = require("classnames/bind");
+const css = classnames.bind(require("./users.module.scss"));
 
 const closedFlyoutState = { openFlyoutName: undefined };
 
@@ -38,11 +39,11 @@ export class Users extends Component {
         this.props.updateCurrentWindow("Users");
     }
 
-    componentWillMount() {
+    UNSAFE_componentWillMount() {
         IdentityGatewayService.VerifyAndRefreshCache();
     }
 
-    componentWillReceiveProps(nextProps) {
+    UNSAFE_componentWillReceiveProps(nextProps) {
         if (
             nextProps.isPending &&
             nextProps.isPending !== this.props.isPending
@@ -86,16 +87,6 @@ export class Users extends Component {
         }
     };
 
-    searchOnChange = ({ target: { value } }) => {
-        if (this.userGridApi) {
-            this.userGridApi.setQuickFilter(value);
-        }
-    };
-
-    onSearchClick = () => {
-        this.props.logEvent(toDiagnosticsModel("Users_Search", {}));
-    };
-
     render() {
         const {
                 t,
@@ -112,6 +103,8 @@ export class Users extends Component {
                 rowData: isPending ? undefined : users || [],
                 onContextMenuChange: this.onContextMenuChange,
                 t: this.props.t,
+                searchAreaLabel: this.props.t("users.ariaLabel"),
+                searchPlaceholder: this.props.t("users.searchPlaceholder"),
             },
             newUserFlyoutOpen = this.state.openFlyoutName === "new-user",
             newServicePrincipalFlyoutOpen =
@@ -168,15 +161,9 @@ export class Users extends Component {
                         />
                     </ContextMenuAlign>
                 </ContextMenu>
-                <PageContent className="users-container">
+                <PageContent className={css("users-container")}>
                     <PageTitle titleValue={t("users.title")} />
                     {!!error && <AjaxError t={t} error={error} />}
-                    <SearchInput
-                        onChange={this.searchOnChange}
-                        onClick={this.onSearchClick}
-                        aria-label={t("users.ariaLabel")}
-                        placeholder={t("users.searchPlaceholder")}
-                    />
                     {!error && <UsersGridContainer {...gridProps} />}
                     {newUserFlyoutOpen && (
                         <UserNewContainer onClose={this.closeFlyout} />

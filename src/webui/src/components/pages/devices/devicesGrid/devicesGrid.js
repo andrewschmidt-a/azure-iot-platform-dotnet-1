@@ -3,7 +3,12 @@
 import React, { Component } from "react";
 import { permissions, toDiagnosticsModel } from "services/models";
 import { Btn, ComponentArray, PcsGrid, Protected } from "components/shared";
-import { deviceColumnDefs, defaultDeviceGridProps } from "./devicesGridConfig";
+import {
+    defaultDeviceColumns,
+    deviceGridColumns,
+    defaultDeviceGridProps,
+    defaultColDef,
+} from "./devicesGridConfig";
 import { DeviceDeleteContainer } from "../flyouts/deviceDelete";
 import { DeviceJobsContainer } from "../flyouts/deviceJobs";
 import { DeviceDetailsContainer } from "../flyouts/deviceDetails";
@@ -17,7 +22,6 @@ import {
     getFlyoutLink,
     userHasPermission,
 } from "utilities";
-import { checkboxColumn } from "components/shared/pcsGrid/pcsGridConfig";
 
 const closedFlyoutState = {
     openFlyoutName: undefined,
@@ -34,48 +38,49 @@ export class DevicesGrid extends Component {
         super(props);
 
         // Set the initial state
-        this.state = closedFlyoutState;
+        this.state = {
+            ...closedFlyoutState,
+            isDeviceSearch: false,
+        };
+    }
 
-        // Default device grid columns
-        this.columnDefs = [
-            checkboxColumn,
-            deviceColumnDefs.id,
-            deviceColumnDefs.isSimulated,
-            deviceColumnDefs.deviceType,
-            deviceColumnDefs.firmware,
-            deviceColumnDefs.telemetry,
-            deviceColumnDefs.status,
-            deviceColumnDefs.lastConnection,
-        ];
-
-        this.contextBtns = (
-            <ComponentArray>
-                <Protected permission={permissions.createJobs}>
-                    <Btn
-                        svg={svgs.reconfigure}
-                        onClick={this.openFlyout("jobs")}
-                    >
-                        {props.t("devices.flyouts.jobs.title")}
-                    </Btn>
-                </Protected>
-                <Protected permission={permissions.deleteDevices}>
-                    <Btn svg={svgs.trash} onClick={this.openFlyout("delete")}>
-                        {props.t("devices.flyouts.delete.title")}
-                    </Btn>
-                </Protected>
-                <Protected permission={permissions.sendC2DMessage}>
-                    <Btn
-                        svg={svgs.email}
-                        onClick={this.openFlyout("c2dmessage")}
-                    >
-                        {props.t("devices.flyouts.c2dMessage.sendMessage")}
-                    </Btn>
-                </Protected>
-                <Btn icon="areaChart" onClick={this.goToTelemetryScreen}>
-                    {props.t("devices.showTelemetry")}
+    contextBtns = () => (
+        <ComponentArray>
+            <Protected permission={permissions.createJobs}>
+                <Btn svg={svgs.reconfigure} onClick={this.openFlyout("jobs")}>
+                    {this.props.t("devices.flyouts.jobs.title")}
                 </Btn>
-            </ComponentArray>
-        );
+            </Protected>
+            <Protected permission={permissions.deleteDevices}>
+                <Btn svg={svgs.trash} onClick={this.openFlyout("delete")}>
+                    {this.props.t("devices.flyouts.delete.title")}
+                </Btn>
+            </Protected>
+            <Protected permission={permissions.sendC2DMessage}>
+                <Btn svg={svgs.email} onClick={this.openFlyout("c2dmessage")}>
+                    {this.props.t("devices.flyouts.c2dMessage.sendMessage")}
+                </Btn>
+            </Protected>
+            <Btn icon="areaChart" onClick={this.goToTelemetryScreen}>
+                {this.props.t("devices.showTelemetry")}
+            </Btn>
+        </ComponentArray>
+    );
+
+    UNSAFE_componentWillMount() {
+        if (
+            this.props &&
+            this.props.location &&
+            this.props.location.pathname === "/deviceSearch"
+        ) {
+            this.setState({
+                isDeviceSearch: true,
+            });
+        } else {
+            this.setState({
+                isDeviceSearch: false,
+            });
+        }
     }
 
     onFirstDataRendered = () => {
@@ -84,9 +89,16 @@ export class DevicesGrid extends Component {
         }
     };
 
+    UNSAFE_componentWillReceiveProps(nextProps) {
+        if (this.state.flyoutOpened === false) {
+            this.setState({ flyoutOpened: true });
+            this.getDefaultFlyout(nextProps.rowData);
+        }
+    }
+
     getDefaultFlyout(rowData) {
         const { location, userPermissions } = this.props;
-        const flyoutName = getFlyoutNameParam(location.search);
+        const flyoutName = getFlyoutNameParam(location);
         var isUserHasPermission = true;
         if (
             flyoutName === "jobs" &&
@@ -95,15 +107,31 @@ export class DevicesGrid extends Component {
             isUserHasPermission = false;
         }
         const deviceIds = this.getDeviceIdsArray(
-                getParamByName(location.search, "deviceId")
-            ),
-            devices = deviceIds
-                ? rowData.filter((device) => deviceIds.includes(device.id))
-                : undefined;
+            getParamByName(location, "deviceId")
+        );
+        let devices = deviceIds
+            ? rowData.filter((device) => deviceIds.includes(device.id))
+            : undefined;
+
+        if (deviceIds && deviceIds.length > devices.length) {
+            const conditions = this.createCondition(
+                deviceIds,
+                "deviceId",
+                deviceIds.length > 1 ? "LK" : "EQ"
+            );
+            this.props.fetchDevicesByCondition({
+                data: conditions,
+                insertIntoGrid: true,
+            });
+            this.setState({ flyoutOpened: false });
+        }
         if (
+            location &&
             location.search &&
             !this.state.softSelectedDeviceId &&
             devices &&
+            devices.length > 0 &&
+            deviceIds.length === devices.length &&
             isUserHasPermission
         ) {
             this.setState({
@@ -113,6 +141,18 @@ export class DevicesGrid extends Component {
             });
             this.selectRows(deviceIds);
         }
+    }
+
+    createCondition(deviceIDs, key, operator) {
+        let data = [];
+        deviceIDs.forEach((element) => {
+            data.push({
+                key: key,
+                operator: operator,
+                value: element,
+            });
+        });
+        return data;
     }
 
     getDeviceIdsArray(deviceIdString) {
@@ -162,6 +202,7 @@ export class DevicesGrid extends Component {
                     .map((d) => d.id)
                     .join("||");
                 flyoutLink = getFlyoutLink(
+                    this.props.currentTenantId,
                     this.props.activeDeviceGroupId,
                     "deviceId",
                     deviceIds ? deviceIds : this.state.softSelectedDeviceId,
@@ -184,6 +225,7 @@ export class DevicesGrid extends Component {
                 );
             case "details":
                 flyoutLink = getFlyoutLink(
+                    this.props.currentTenantId,
                     this.props.activeDeviceGroupId,
                     "deviceId",
                     this.state.softSelectedDeviceId,
@@ -195,6 +237,7 @@ export class DevicesGrid extends Component {
                         onClose={this.closeFlyout}
                         deviceId={this.state.softSelectedDeviceId}
                         flyoutLink={flyoutLink}
+                        isDeviceSearch={this.state.isDeviceSearch}
                     />
                 );
             case "c2dmessage":
@@ -210,15 +253,23 @@ export class DevicesGrid extends Component {
     };
 
     closeFlyout = () => {
-        this.props.location.search = undefined;
+        if (this.props.location && this.props.location.search) {
+            this.props.location.search = undefined;
+        }
         this.setState(closedFlyoutState);
     };
 
     goToTelemetryScreen = () => {
         const selectedDevices = this.deviceGridApi.getSelectedRows();
-        this.props.history.push("/devices/telemetry", {
-            deviceIds: selectedDevices.map(({ id }) => id),
-        });
+        if (this.state.isDeviceSearch) {
+            this.props.history.push("/deviceSearch/telemetry", {
+                deviceIds: selectedDevices.map(({ id }) => id),
+            });
+        } else {
+            this.props.history.push("/devices/telemetry", {
+                deviceIds: selectedDevices.map(({ id }) => id),
+            });
+        }
     };
 
     /**
@@ -250,7 +301,7 @@ export class DevicesGrid extends Component {
         const { onContextMenuChange, onHardSelectChange } = this.props;
         if (isFunc(onContextMenuChange)) {
             onContextMenuChange(
-                selectedDevices.length > 0 ? this.contextBtns : null
+                selectedDevices.length > 0 ? this.contextBtns() : null
             );
         }
         if (isFunc(onHardSelectChange)) {
@@ -269,18 +320,28 @@ export class DevicesGrid extends Component {
     getSoftSelectId = ({ id } = "") => id;
 
     render() {
+        let columnDefs = null;
+
+        if (this.props.useStaticCols) {
+            columnDefs = deviceGridColumns;
+        } else {
+            columnDefs =
+                this.props.columnDefs && this.props.columnDefs.length > 0
+                    ? defaultDeviceColumns.concat(this.props.columnDefs)
+                    : defaultDeviceColumns;
+        }
+
         const gridProps = {
             /* Grid Properties */
             ...defaultDeviceGridProps,
             onFirstDataRendered: this.onFirstDataRendered,
-            columnDefs: translateColumnDefs(this.props.t, this.columnDefs),
+            defaultColDef: defaultColDef,
             sizeColumnsToFit: true,
             getSoftSelectId: this.getSoftSelectId,
             softSelectId: this.state.softSelectedDeviceId || {},
             ...this.props, // Allow default property overrides
-            deltaRowDataMode: true,
-            enableSorting: true,
-            unSortIcon: true,
+            columnDefs: translateColumnDefs(this.props.t, columnDefs),
+            immutableData: true,
             getRowNodeId: ({ id }) => id,
             context: {
                 t: this.props.t,
@@ -292,8 +353,8 @@ export class DevicesGrid extends Component {
             onHardSelectChange: this.onHardSelectChange,
             onColumnMoved: this.onColumnMoved,
             onSortChanged: this.onSortChanged,
+            gridControls: this.props.gridControls,
         };
-
         return [
             <PcsGrid key="device-grid-key" {...gridProps} />,
             this.getOpenFlyout(),

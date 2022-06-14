@@ -27,7 +27,7 @@
       "Collection": "messages",
       "Database": "iot",
       "MessageRetrievalCountLimit": 1000,
-      "TelemetryStorageType": "cosmosdb"
+      "TelemetryStorageType": "OVERWRITTEN_IN_DEPLOYMENT"
     },
     "RulesTemplatesFolder": "./data/Rules/",
     "TimeSeries": {
@@ -69,11 +69,15 @@
         "Audience": "IoTPlatform",
         "AuthIssuer": "OVERWRITTEN_IN_DEPLOYMENT",
         "ClockSkewSeconds": "300"
-      }
+      },
+      "TokenExpirationDuration": "09:00:00"
     },
     "CosmosDb": {
-      "AccountName": "OVERWRITTEN_IN_DEPLOYMENT",
-      "Rus": "400"
+        "AccountName": "OVERWRITTEN_IN_DEPLOYMENT",
+        "Rus": "400"
+    },
+    "DataExplorer": {
+      "Name": "OVERWRITTEN_IN_DEPLOYMENT"
     },
     "DevelopmentMode": "true",
     "KeyVault": {
@@ -119,6 +123,7 @@
     "TelemetryFunctionUri": "OVERWRITTEN_IN_DEPLOYMENT",
     "TwinChangeEventHubConnectionString": "OVERWRITTEN_IN_DEPLOYMENT",
     "TwinChangeFunctionName": "twin-change-processor",
-    "TwinChangeFunctionUri": "OVERWRITTEN_IN_DEPLOYMENT"
+    "TwinChangeFunctionUri": "OVERWRITTEN_IN_DEPLOYMENT",
+    "DeviceTwinMirrorEventHubConnectionString": "OVERWRITTEN_IN_DEPLOYMENT"
   }
 }

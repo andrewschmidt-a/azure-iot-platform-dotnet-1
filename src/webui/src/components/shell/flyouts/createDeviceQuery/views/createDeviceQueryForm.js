@@ -20,6 +20,9 @@ import { toCreateDeviceGroupRequestModel } from "services/models";
 
 import Flyout from "components/shared/flyout";
 
+const classnames = require("classnames/bind");
+const css = classnames.bind(require("../createDeviceQuery.module.scss"));
+
 const Section = Flyout.Section;
 
 // A counter for creating unique keys per new condition
@@ -92,17 +95,17 @@ class CreateDeviceQueryForm extends LinkedComponent {
         return new Promise((resolve, reject) => {
             try {
                 this.setState({ error: undefined, isPending: true }, () => {
-                    const rawQueryConditions = this.state.deviceQueryConditions.filter(
-                        (condition) => {
+                    const rawQueryConditions =
+                        this.state.deviceQueryConditions.filter((condition) => {
                             // remove conditions that are new (have not been edited)
                             return !this.conditionIsNew(condition);
-                        }
-                    );
+                        });
                     this.props.setActiveDeviceQueryConditions(
                         rawQueryConditions.map((condition) => {
                             return toDeviceConditionModel(condition);
                         })
                     );
+                    this.props.fetchDeviceStatistics();
                     this.props.fetchDevices();
                     resolve();
                 });
@@ -155,6 +158,7 @@ class CreateDeviceQueryForm extends LinkedComponent {
                     },
                     () => {
                         this.props.setActiveDeviceQueryConditions([]);
+                        this.props.fetchDeviceStatistics(); // reload the device statistics
                         this.props.fetchDevices(); // reload the devices grid with a blank query
                         this.render();
                         resolve();
@@ -302,9 +306,12 @@ class CreateDeviceQueryForm extends LinkedComponent {
 
         return (
             <form onSubmit={this.apply}>
-                <Section.Container collapsable={false} className="borderless">
+                <Section.Container
+                    collapsable={false}
+                    className={css("borderless")}
+                >
                     <Btn
-                        className="add-btn"
+                        className={css("add-btn")}
                         svg={svgs.plus}
                         onClick={this.addCondition}
                     >
@@ -391,7 +398,7 @@ class CreateDeviceQueryForm extends LinkedComponent {
                                             ariaLabel={t(
                                                 "deviceQueryConditions.type"
                                             )}
-                                            className="short"
+                                            className="small"
                                             clearable={false}
                                             searchable={false}
                                             options={typeOptions}

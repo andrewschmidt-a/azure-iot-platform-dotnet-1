@@ -2,14 +2,24 @@
 // Copyright (c) 3M. All rights reserved.
 // </copyright>
 
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
 using Microsoft.AspNetCore.Mvc;
 using Mmm.Iot.Common.Services;
+using Mmm.Iot.Common.Services.Config;
 using Mmm.Iot.Common.Services.Filters;
+using Mmm.Iot.Common.Services.Helpers;
+using Mmm.Iot.Common.Services.Models;
 using Mmm.Iot.IoTHubManager.Services;
+using Mmm.Iot.IoTHubManager.Services.Models;
 using Mmm.Iot.IoTHubManager.WebService.Models;
+using Newtonsoft.Json.Linq;
 
 namespace Mmm.Iot.IoTHubManager.WebService.Controllers
 {
@@ -42,6 +52,26 @@ namespace Mmm.Iot.IoTHubManager.WebService.Controllers
             return new DeviceListApiModel(await this.devices.GetListAsync(query, continuationToken));
         }
 
+        [HttpGet("iothub")]
+        [Authorize("ReadAll")]
+        public async Task<DeviceListApiModel> GetIoTHubDevicesAsync([FromQuery] string query)
+        {
+            string continuationToken = string.Empty;
+            if (this.Request.Headers.ContainsKey(ContinuationTokenName))
+            {
+                continuationToken = this.Request.Headers[ContinuationTokenName].FirstOrDefault();
+            }
+
+            return new DeviceListApiModel(await this.devices.GetListFromIoTHubAsync(query, continuationToken));
+        }
+
+        [HttpGet("statistics")]
+        [Authorize("ReadAll")]
+        public async Task<DeviceStatisticsApiModel> GetDevicesStatisticsAsync([FromQuery] string query)
+        {
+            return new DeviceStatisticsApiModel(await this.devices.GetDeviceStatisticsAsync(query));
+        }
+
         [HttpPost("query")]
         [Authorize("ReadAll")]
         public async Task<DeviceListApiModel> QueryDevicesAsync([FromBody] string query)
@@ -57,9 +87,9 @@ namespace Mmm.Iot.IoTHubManager.WebService.Controllers
 
         [HttpGet("deploymentHistory/{id}")]
         [Authorize("ReadAll")]
-        public async Task<TwinPropertiesListApiModel> GetDeviceDeploymentAsync(string id)
+        public async Task<DeploymentHistoryListModel> GetDeviceDeploymentAsync(string id)
         {
-            return new TwinPropertiesListApiModel(await this.devices.GetDeploymentHistoryAsync(id, this.GetTenantId()));
+            return await this.devices.GetDeploymentHistoryAsync(id, this.GetTenantId());
         }
 
         [HttpGet("{id}")]
@@ -110,6 +140,86 @@ namespace Mmm.Iot.IoTHubManager.WebService.Controllers
         public async Task<List<string>> GetDeviceFilesAsync(string id)
         {
             return await this.deviceProperties.GetUploadedFilesForDevice(this.GetTenantId(), id);
+        }
+
+        [HttpPost("report")]
+        [Authorize("ReadAll")]
+        public async Task<IActionResult> ExportDevicesReport([FromQuery] string query, [FromBody] List<ColumnMappingModel> columnMapping)
+        {
+            var deviceList = new DeviceListApiModel(await this.devices.GetListAsync(query, null));
+
+            var stream = new MemoryStream();
+
+            using (SpreadsheetDocument package = SpreadsheetDocument.Create(stream, SpreadsheetDocumentType.Workbook))
+            {
+                this.CreatePartsForExcel(package, deviceList.Items, columnMapping);
+            }
+
+            stream.Position = 0;
+            string excelName = $"DeploymentReport-{DateTime.Now.ToString("yyyyMMddHHmmssfff")}.xlsx";
+
+            return this.File(stream, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", excelName);
+        }
+
+        private void CreatePartsForExcel(SpreadsheetDocument document, List<DeviceRegistryApiModel> data, List<ColumnMappingModel> columnMapping)
+        {
+            SheetData partSheetData = this.GenerateSheetdataForDetails(data, columnMapping);
+
+            WorkbookPart workbookPart = document.AddWorkbookPart();
+            this.GenerateWorkbookPartContent(workbookPart);
+
+            WorkbookStylesPart workbookStylesPart = workbookPart.AddNewPart<WorkbookStylesPart>("rId3");
+            OpenXMLHelper.GenerateWorkbookStylesPartContent(workbookStylesPart);
+
+            WorksheetPart worksheetPart = workbookPart.AddNewPart<WorksheetPart>("rId1");
+            OpenXMLHelper.GenerateWorksheetPartContent(worksheetPart, partSheetData);
+        }
+
+        private void GenerateWorkbookPartContent(WorkbookPart workbookPart)
+        {
+            Workbook workbook = new Workbook();
+            Sheets sheets = new Sheets();
+            Sheet sheet = new Sheet() { Name = "Device Report", SheetId = (UInt32Value)1U, Id = "rId1" };
+            sheets.Append(sheet);
+            workbook.Append(sheets);
+            workbookPart.Workbook = workbook;
+        }
+
+        private SheetData GenerateSheetdataForDetails(List<DeviceRegistryApiModel> data, List<ColumnMappingModel> columnMapping)
+        {
+            SheetData sheetData = new SheetData();
+            sheetData.Append(this.CreateHeaderRowForExcel(columnMapping));
+
+            foreach (DeviceRegistryApiModel model in data)
+            {
+                Row partsRows = this.GenerateRowForChildPartDetail(model, columnMapping);
+                sheetData.Append(partsRows);
+            }
+
+            return sheetData;
+        }
+
+        private Row CreateHeaderRowForExcel(List<ColumnMappingModel> columnMapping)
+        {
+            Row workRow = new Row();
+            foreach (var t in columnMapping)
+            {
+                workRow.Append(OpenXMLHelper.CreateCell(t.Name, 2U));
+            }
+
+            return workRow;
+        }
+
+        private Row GenerateRowForChildPartDetail(DeviceRegistryApiModel model, List<ColumnMappingModel> columnMapping)
+        {
+            Row tRow = new Row();
+            JObject modelObject = (JObject)JToken.FromObject(model);
+            foreach (var map in columnMapping)
+            {
+                tRow.Append(OpenXMLHelper.CreateCell((string)modelObject.SelectToken(map.Mapping)));
+            }
+
+            return tRow;
         }
     }
 }

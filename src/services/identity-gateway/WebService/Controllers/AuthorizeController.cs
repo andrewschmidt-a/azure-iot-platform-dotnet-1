@@ -4,7 +4,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
@@ -108,6 +107,12 @@ namespace Mmm.Iot.IdentityGateway.Controllers
                 throw new Exception("Not granted access to that tenant");
             }
 
+            DateTime? expirationTime = null;
+            if (this.config.Global.ClientAuth.TokenExpirationDuration != null)
+            {
+                expirationTime = DateTime.Now.Add(TimeSpan.ParseExact(this.config.Global.ClientAuth.TokenExpirationDuration, "c", null));
+            }
+
             // if successful, then mint token
             var jwtHandler = new JwtSecurityTokenHandler();
             var claims = new List<Claim>();
@@ -116,7 +121,7 @@ namespace Mmm.Iot.IdentityGateway.Controllers
             claims.Add(new Claim("name", input.ClientId));
             claims.Add(new Claim("type", "Client Credentials"));
 
-            string tokenString = jwtHandler.WriteToken(await this.jwtHelper.GetIdentityToken(claims, input.Scope, "IoTPlatform", null));
+            string tokenString = jwtHandler.WriteToken(await this.jwtHelper.GetIdentityToken(claims, input.Scope, "IoTPlatform", expirationTime));
 
             return this.StatusCode(200, tokenString);
         }
@@ -217,6 +222,7 @@ namespace Mmm.Iot.IdentityGateway.Controllers
                 string inviteUserId = inviteJWT.Claims.Where(c => c.Type == "userId").First().Value;
                 string newUserId = claims.Where(c => c.Type == "sub").First().Value;
                 invitedTenant = inviteJWT.Claims.Where(c => c.Type == "tenant").First().Value;
+                string invitedBy = inviteJWT.Claims.Where(c => c.Type == "invitedby").First().Value;
 
                 // Extract first email
                 var emailClaim = jwt.Claims.Where(t => t.Type == "emails").FirstOrDefault();
@@ -243,8 +249,13 @@ namespace Mmm.Iot.IdentityGateway.Controllers
                     Roles = JsonConvert.SerializeObject(inviteJWT.Claims.Where(c => c.Type == "role").Select(c => c.Value).ToList()),
                     Type = "Member",
                     Name = userNameOrEmail,
+                    CreatedBy = invitedBy,
+                    CreatedTime = DateTime.UtcNow,
                 };
                 await this.userTenantContainer.UpdateAsync(userTenant);
+
+                // Add user to grafana.
+                await this.userTenantContainer.AddUserToGrafana(userTenant);
 
                 UserSettingsInput userSettings = new UserSettingsInput()
                 {
@@ -277,7 +288,17 @@ namespace Mmm.Iot.IdentityGateway.Controllers
                 claims.Add(new Claim("nonce", authState.Nonce));
             }
 
-            string tokenString = jwtHandler.WriteToken(await this.jwtHelper.GetIdentityToken(claims, invitedTenant, originalAudience, null));
+            DateTime? expirationTime = null;
+            if (this.config.Global.ClientAuth.TokenExpirationDuration != null)
+            {
+                expirationTime = DateTime.Now.Add(TimeSpan.ParseExact(this.config.Global.ClientAuth.TokenExpirationDuration, "c", null));
+            }
+
+            string accessTokenString = jwtHandler.WriteToken(await this.jwtHelper.GetIdentityToken(claims.Select(t => (Claim)t.Clone()).ToList(), invitedTenant, originalAudience, expirationTime));
+            claims.Add(new Claim("at_hash", this.jwtHelper.AtHash(accessTokenString)));
+            string idTokenString =
+                jwtHandler.WriteToken(
+                    await this.jwtHelper.GetIdentityToken(claims, invitedTenant, originalAudience, expirationTime));
 
             // Build Return Uri
             var returnUri = new UriBuilder(authState.ReturnUrl);
@@ -287,10 +308,47 @@ namespace Mmm.Iot.IdentityGateway.Controllers
             // query["state"] = HttpUtility.UrlEncode(authState.state);
             // returnUri.Query = query.ToString();
             returnUri.Fragment =
-                "id_token=" + tokenString + "&state=" +
+                "id_token=" + idTokenString + "&state=" +
                 HttpUtility.UrlEncode(authState
-                    .State); // pass token in Fragment for more security (Browser wont forward...)
+                    .State) // pass token in Fragment for more security (Browser wont forward...)
+                + "&access_token=" + accessTokenString;
             return this.Redirect(returnUri.Uri.ToString());
+        }
+
+        [HttpGet("connect/validate")]
+        public ActionResult Validate([FromHeader(Name = "Authorization")] string authHeader)
+        {
+            if (authHeader == null || !authHeader.StartsWith("Bearer"))
+            {
+                throw new NoAuthorizationException("No Bearer Token Authorization Header was passed.");
+            }
+
+            // Extract Bearer token
+            string encodedToken = authHeader.Substring("Bearer ".Length).Trim();
+            var jwtHandler = new JwtSecurityTokenHandler();
+            if (!this.jwtHelper.TryValidateToken("IoTPlatform", encodedToken, this.HttpContext, out JwtSecurityToken jwt))
+            {
+                throw new NoAuthorizationException("The given token could not be read or validated.");
+            }
+
+            if (jwt?.Claims?.Count(c => c.Type == "sub") == 0)
+            {
+                throw new NoAuthorizationException("Not allowed access. No User Claims");
+            }
+
+            string sub = jwt?.Claims?.FirstOrDefault(c => c.Type == "sub").Value;
+
+            if (!string.IsNullOrWhiteSpace(sub))
+            {
+                // Set headers for paging
+                this.Response.Headers.Add("X-LoggedInUser", sub);
+
+                return this.StatusCode(200);
+            }
+            else
+            {
+                throw new NoAuthorizationException("Not allowed access to this tenant.");
+            }
         }
     }
 }

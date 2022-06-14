@@ -1,10 +1,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 
 import React from "react";
-import { LinkedComponent } from "utilities";
-import { Flyout, FormControl } from "components/shared";
+import { LinkedComponent, svgs, copyToClipboard } from "utilities";
+import { Btn, Flyout, FormControl } from "components/shared";
 
-import "../packageNew/packageNew.scss";
+import "./packageJSON.scss";
+
+const classnames = require("classnames/bind");
+const css = classnames.bind(require("../packageNew/packageNew.module.scss"));
 
 export class PackageJSON extends LinkedComponent {
     constructor(props) {
@@ -22,7 +25,7 @@ export class PackageJSON extends LinkedComponent {
         this.props.onClose();
     };
 
-    componentWillReceiveProps(nextProps) {
+    UNSAFE_componentWillReceiveProps(nextProps) {
         if (nextProps.packageJson !== this.props.packageJson) {
             var jsonData = JSON.parse(nextProps.packageJson);
             this.state = {
@@ -46,7 +49,7 @@ export class PackageJSON extends LinkedComponent {
     }
 
     render() {
-        const { t, theme, flyoutLink } = this.props;
+        const { t, theme, flyoutLink, packageId } = this.props;
         this.packageJsonLink = this.linkTo("packageJson");
 
         return (
@@ -60,15 +63,36 @@ export class PackageJSON extends LinkedComponent {
                 }}
                 flyoutLink={flyoutLink}
             >
-                <div className="new-package-content">
-                    <form className="new-package-form">
-                        <FormControl
-                            link={this.packageJsonLink}
-                            type="jsoninput"
-                            height="100%"
-                            theme={theme}
-                        />
-                    </form>
+                <div>
+                    <div className="pcs-renderer-cell highlight">
+                        <span>
+                            <h4>Package Id</h4>
+                        </span>
+                        <span>
+                            <Btn
+                                className={"copy-icon"}
+                                svg={svgs.copy}
+                                onClick={() => copyToClipboard(packageId)}
+                            ></Btn>
+                        </span>
+                    </div>
+                    <div>{packageId}</div>
+                </div>
+                <br></br>
+                <div>
+                    <div>
+                        <h4>Package JSON</h4>
+                    </div>
+                    <div className={css("new-package-content")}>
+                        <form className={css("new-package-form")}>
+                            <FormControl
+                                link={this.packageJsonLink}
+                                type="jsoninput"
+                                height="100%"
+                                theme={theme}
+                            />
+                        </form>
+                    </div>
                 </div>
             </Flyout>
         );
